@@ -24,6 +24,7 @@ import org.everit.json.schema.loader.SchemaClient;
 import org.everit.json.schema.loader.SchemaLoader;
 import org.everit.json.schema.loader.SchemaLoader.SchemaLoaderBuilder;
 import org.everit.json.schema.loader.internal.DefaultSchemaClient;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
@@ -50,7 +51,6 @@ public class Validator implements SchemaValidator {
      * against it
      */
     private final JSONObject jsonSchemaObject;
-
     /**
      * this is what SchemaLoader uses to download remote $refs. Not necessarily an
      * HTTP client, see the docs for details. We override the default SchemaClient
@@ -103,10 +103,9 @@ public class Validator implements SchemaValidator {
         // validateObject will succeed, because all it cares about is that "$ref" is a URI
         // In order to validate that $ref points at an existing location in an existing document
         // we have to "load" the schema
-        loadResourceSchema(definition);
     }
 
-    public Schema loadResourceSchema(final JSONObject resourceDefinition) {
+        validateObject(resourceDefinition, definitionSchemaJsonObject);
         return getResourceSchemaBuilder(resourceDefinition).build();
     }
 
@@ -120,7 +119,7 @@ public class Validator implements SchemaValidator {
      */
     public Schema.Builder<?> getResourceSchemaBuilder(final JSONObject resourceDefinition) {
         final SchemaLoaderBuilder loaderBuilder = getSchemaLoader(resourceDefinition);
-        loaderBuilder.registerSchemaByURI(RESOURCE_DEFINITION_SCHEMA_URI, definitionSchemaJsonObject);
+        registerMetaSchema(loaderBuilder, definitionSchemaJsonObject);
 
         final SchemaLoader loader = loaderBuilder.build();
         try {
@@ -147,6 +146,7 @@ public class Validator implements SchemaValidator {
         // registered twice because we've seen some confusion around this in the past
         builder.registerSchemaByURI(JSON_SCHEMA_URI_HTTP, jsonSchemaObject);
         builder.registerSchemaByURI(JSON_SCHEMA_URI_HTTPS, jsonSchemaObject);
+        registerMetaSchema(builder, jsonSchemaObject);
 
         return builder;
     }
@@ -162,5 +162,34 @@ public class Validator implements SchemaValidator {
         } catch (URISyntaxException e) {
             throw new RuntimeException(uri);
         }
+    }
+    /**
+     * Register a meta-schema with the SchemaLoaderBuilder. The meta-schema $id is used to generate schema URI
+     * This has the effect of caching the meta-schema. When SchemaLoaderBuilder is used to build the Schema object,
+     * the cached version will be used. No calls to remote URLs will be made.
+     * Validator caches JSON schema (/resources/schema) and Resource Definition Schema
+     * (/resources/provider.definition.schema.v1.json)
+     *
+     * @param loaderBuilder
+     * @param schema meta-schema JSONObject to be cached. Must have a valid $id property
+     */
+    void registerMetaSchema(final SchemaLoaderBuilder loaderBuilder, JSONObject schema) {
+        try {
+            String id = schema.getString(ID_KEY);
+            if (id.isEmpty()) {
+                throw new ValidationException("Invalid $id value", "$id", "[empty string]");
+            }
+            final URI uri = new URI(id);
+            loaderBuilder.registerSchemaByURI(uri, schema);
+        } catch (URISyntaxException e) {
+            throw new ValidationException("Invalid $id value", "$id", e);
+        } catch (JSONException e) {
+            // $id is missing or not a string
+            throw new ValidationException("Invalid $id value", "$id", e);
+        }
+    }
+
+    private static JSONObject loadResourceAsJSON(String path) {
+        return new JSONObject(new JSONTokener(Validator.class.getResourceAsStream(path)));
     }
 }

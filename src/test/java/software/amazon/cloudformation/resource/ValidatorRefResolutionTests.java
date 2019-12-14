@@ -27,10 +27,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.verification.VerificationMode;
 
 import software.amazon.cloudformation.resource.exceptions.ValidationException;
 
+/**
+ *
+ */
 @ExtendWith(MockitoExtension.class)
 public class ValidatorRefResolutionTests {
 
@@ -111,4 +116,9 @@ public class ValidatorRefResolutionTests {
     private JSONObject getSampleTemplate() {
         return new JSONObject().put("Time", "2019-12-12T10:10:22.212Z");
     }
+
+    private static VerificationMode twice() {
+        return Mockito.times(2);
+    }
+
 }

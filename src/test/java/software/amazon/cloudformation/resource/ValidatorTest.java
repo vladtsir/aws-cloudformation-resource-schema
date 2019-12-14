@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.everit.json.schema.loader.SchemaLoader;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +36,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.cloudformation.resource.exceptions.ValidationException;
 
 public class ValidatorTest {
+    private static final String RESOURCE_DEFINITION_SCHEMA_PATH = "/schema/provider.definition.schema.v1.json";
     private static final String TEST_SCHEMA_PATH = "/test-schema.json";
     private static final String TEST_VALUE_SCHEMA_PATH = "/scrubbed-values-schema.json";
     private static final String TYPE_NAME_KEY = "typeName";
@@ -478,6 +480,32 @@ public class ValidatorTest {
             final JSONObject example = new JSONObject(new JSONTokener(stream));
             validator.validateResourceDefinition(example);
         }
+    }
+
+    /**
+     * trivial coverage test: cannot cache a schema if it has an invalid $id
+     */
+    @ParameterizedTest
+    @ValueSource(strings = { ":invalid/uri", "" })
+    public void registerMetaSchema_invalidRelativeRef_shouldThrow(String uri) {
+
+        JSONObject badSchema = loadJSON(RESOURCE_DEFINITION_SCHEMA_PATH);
+        badSchema.put("$id", uri);
+        assertThatExceptionOfType(ValidationException.class).isThrownBy(() -> {
+            validator.registerMetaSchema(SchemaLoader.builder(), badSchema);
+        });
+    }
+
+    /**
+     * trivial coverage test: cannot cache a schema if it has no $id
+     */
+    @Test
+    public void registerMetaSchema_nullId_shouldThrow() {
+        JSONObject badSchema = loadJSON(RESOURCE_DEFINITION_SCHEMA_PATH);
+        badSchema.remove("$id");
+        assertThatExceptionOfType(ValidationException.class).isThrownBy(() -> {
+            validator.registerMetaSchema(SchemaLoader.builder(), badSchema);
+        });
     }
 
     static JSONObject loadJSON(String path) {
