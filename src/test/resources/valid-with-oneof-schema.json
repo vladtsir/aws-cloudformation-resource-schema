@@ -3,6 +3,9 @@
     "description": "A test schema for unit tests.",
     "sourceUrl": "https://mycorp.com/my-repo.git",
     "properties": {
+        "id" : {
+            "type": "string"
+        },
         "propertyA": {
             "type": "string"
         },
@@ -23,7 +26,7 @@
         }
     ],
     "primaryIdentifier": [
-        "/properties/propertyA"
+        "/properties/id"
     ],
     "additionalProperties": false
 }

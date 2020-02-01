@@ -15,12 +15,11 @@
 package software.amazon.cloudformation.resource;
 
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static software.amazon.cloudformation.resource.ValidatorTest.loadJSON;
 
-import org.everit.json.schema.Schema;
 import org.everit.json.schema.loader.SchemaClient;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +38,7 @@ import software.amazon.cloudformation.resource.exceptions.ValidationException;
 @ExtendWith(MockitoExtension.class)
 public class ValidatorRefResolutionTests {
 
-    public static final String RESOURCE_DEFINITION_PATH = "/valid-with-refs.json";
+    public static final String RESOURCE_DEFINITION_PATH = "/valid-with-refs-schema.json";
     private final static String COMMON_TYPES_PATH = "/common.types.v1.json";
     private final String expectedRefUrl = "https://schema.cloudformation.us-east-1.amazonaws.com/common.types.v1.json";
 
@@ -49,7 +48,7 @@ public class ValidatorRefResolutionTests {
 
     @BeforeEach
     public void beforeEach() {
-        when(downloader.get(expectedRefUrl)).thenAnswer(x -> ValidatorTest.getResourceAsStream(COMMON_TYPES_PATH));
+        lenient().when(downloader.get(expectedRefUrl)).thenAnswer(x -> ValidatorTest.getResourceAsStream(COMMON_TYPES_PATH));
 
         this.validator = new Validator(downloader);
     }
@@ -74,7 +73,7 @@ public class ValidatorRefResolutionTests {
     @Test
     public void loadResourceSchema_invalidRelativeRef_shouldThrow() {
 
-        JSONObject badSchema = loadJSON("/invalid-bad-ref.json");
+        JSONObject badSchema = loadJSON("/invalid-bad-ref-schema.json");
 
         assertThatExceptionOfType(ValidationException.class)
             .isThrownBy(() -> validator.validateResourceDefinition(badSchema));
@@ -85,7 +84,7 @@ public class ValidatorRefResolutionTests {
     public void validateTemplateAgainstResourceSchema_valid_shouldSucceed() {
 
         JSONObject resourceDefinition = loadJSON(RESOURCE_DEFINITION_PATH);
-        Schema schema = validator.loadResourceSchema(resourceDefinition);
+        ResourceTypeSchema schema = ResourceTypeSchema.load(resourceDefinition);
 
         schema.validate(getSampleTemplate());
     }
@@ -97,7 +96,7 @@ public class ValidatorRefResolutionTests {
     @Test
     public void validateTemplateAgainsResourceSchema_invalid_shoudThrow() {
         JSONObject resourceDefinition = loadJSON(RESOURCE_DEFINITION_PATH);
-        Schema schema = validator.loadResourceSchema(resourceDefinition);
+        ResourceTypeSchema schema = ResourceTypeSchema.load(resourceDefinition);
 
         final JSONObject template = getSampleTemplate();
         template.put("propertyB", "not.an.IP.address");

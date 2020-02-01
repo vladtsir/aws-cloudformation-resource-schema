@@ -25,8 +25,8 @@ import lombok.Getter;
 
 import org.everit.json.schema.JSONPointer;
 import org.everit.json.schema.JSONPointerException;
-import org.everit.json.schema.Schema;
 import org.everit.json.schema.PublicJSONPointer;
+import org.everit.json.schema.Schema;
 import org.json.JSONObject;
 
 import software.amazon.cloudformation.resource.exceptions.ValidationException;
@@ -165,5 +165,9 @@ public class ResourceTypeSchema {
         } catch (JSONPointerException | NumberFormatException e) {
             // do nothing, as this indicates the model does not have a value for the pointer
         }
+    }
+
+    public void validate(JSONObject json) {
+        getSchema().validate(json);
     }
 }

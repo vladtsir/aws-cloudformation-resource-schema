@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.catchThrowableOfType;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -39,6 +40,8 @@ public class ValidatorTest {
     private static final String RESOURCE_DEFINITION_SCHEMA_PATH = "/schema/provider.definition.schema.v1.json";
     private static final String TEST_SCHEMA_PATH = "/test-schema.json";
     private static final String TEST_VALUE_SCHEMA_PATH = "/scrubbed-values-schema.json";
+    private static final String SCHEMA_WITH_HANDLERS_PATH = "/valid-with-handlers-schema.json";
+    private static final String SCHEMA_WITH_ONEOF = "/valid-with-oneof-schema.json";
     private static final String TYPE_NAME_KEY = "typeName";
     private static final String PROPERTIES_KEY = "properties";
     private static final String DESCRIPTION_KEY = "description";
@@ -128,8 +131,7 @@ public class ValidatorTest {
         final JSONObject object = new JSONObject().put("StringProperty", value);
 
         final ValidationException e = catchThrowableOfType(
-            () -> validator.validateObject(object,
-                new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_VALUE_SCHEMA_PATH)))),
+            () -> validator.validateObject(object, loadJSON(TEST_VALUE_SCHEMA_PATH)),
             ValidationException.class);
 
         assertThat(e.getSchemaPointer()).isEqualTo("#/StringProperty");
@@ -170,8 +172,7 @@ public class ValidatorTest {
         final JSONObject object = new JSONObject().put("ArrayProperty", values);
 
         final ValidationException e = catchThrowableOfType(
-            () -> validator.validateObject(object,
-                new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_VALUE_SCHEMA_PATH)))),
+            () -> validator.validateObject(object, loadJSON(TEST_VALUE_SCHEMA_PATH)),
             ValidationException.class);
 
         assertThat(e.getKeyword()).isEqualTo(keyword);
@@ -190,8 +191,7 @@ public class ValidatorTest {
         final JSONObject object = new JSONObject().put(propName, Integer.valueOf(numAsString));
 
         final ValidationException e = catchThrowableOfType(
-            () -> validator.validateObject(object,
-                new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_VALUE_SCHEMA_PATH)))),
+            () -> validator.validateObject(object, loadJSON(TEST_VALUE_SCHEMA_PATH)),
             ValidationException.class);
 
         assertThat(e.getKeyword()).isEqualTo(keyword);
@@ -230,8 +230,7 @@ public class ValidatorTest {
         final JSONObject object = new JSONObject().put("MapProperty", new JSONObject().put("def", "val"));
 
         final ValidationException e = catchThrowableOfType(
-            () -> validator.validateObject(object,
-                new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_VALUE_SCHEMA_PATH)))),
+            () -> validator.validateObject(object, loadJSON(TEST_VALUE_SCHEMA_PATH)),
             ValidationException.class);
 
         assertThat(e.getSchemaPointer()).isEqualTo("#/MapProperty");
@@ -249,8 +248,7 @@ public class ValidatorTest {
         final JSONObject object = new JSONObject().put(propName, propVal);
 
         final ValidationException e = catchThrowableOfType(
-            () -> validator.validateObject(object,
-                new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_VALUE_SCHEMA_PATH)))),
+            () -> validator.validateObject(object, loadJSON(TEST_VALUE_SCHEMA_PATH)),
             ValidationException.class);
 
         final String pointer = "#/" + propName;
@@ -273,8 +271,7 @@ public class ValidatorTest {
             .put("propertyX", propValue).put("propertyY", propValue);
 
         final ValidationException e = catchThrowableOfType(
-            () -> validator.validateObject(object,
-                new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_SCHEMA_PATH)))),
+            () -> validator.validateObject(object, loadJSON(TEST_SCHEMA_PATH)),
             ValidationException.class);
 
         assertThat(e.getCausingExceptions()).hasSize(3);
@@ -296,7 +293,7 @@ public class ValidatorTest {
 
     @Test
     public void validateDefinition_validExampleDefinition_shouldNotThrow() {
-        final JSONObject definition = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_SCHEMA_PATH)));
+        final JSONObject definition = loadJSON(TEST_SCHEMA_PATH);
         validator.validateResourceDefinition(definition);
     }
 
@@ -320,8 +317,7 @@ public class ValidatorTest {
 
     @Test
     public void validateDefinition_invalidHandlerSection_shouldThrow() {
-        final JSONObject definition = new JSONObject(new JSONTokener(this.getClass()
-            .getResourceAsStream("/invalid-handlers.json")));
+        final JSONObject definition = loadJSON("/invalid-handlers-schema.json");
 
         assertThatExceptionOfType(ValidationException.class).isThrownBy(() -> validator.validateResourceDefinition(definition))
             .withNoCause().withMessage("#/handlers/read: required key [permissions] not found");
@@ -331,8 +327,7 @@ public class ValidatorTest {
     @ValueSource(ints = { 1, 721 })
     public void validateDefinition_invalidTimeout_shouldThrow(final int timeout) {
         // modifying the valid-with-handlers.json to add invalid timeout
-        final JSONObject definition = new JSONObject(new JSONTokener(this.getClass()
-            .getResourceAsStream("/valid-with-handlers.json")));
+        final JSONObject definition = loadJSON(SCHEMA_WITH_HANDLERS_PATH);
 
         final JSONObject createDefinition = definition.getJSONObject("handlers").getJSONObject("create");
         createDefinition.put("timeoutInMinutes", timeout);
@@ -346,8 +341,7 @@ public class ValidatorTest {
     @ParameterizedTest
     @ValueSource(ints = { 2, 120, 720 })
     public void validateDefinition_withTimeout_shouldNotThrow(final int timeout) {
-        final JSONObject definition = new JSONObject(new JSONTokener(this.getClass()
-            .getResourceAsStream("/valid-with-handlers.json")));
+        final JSONObject definition = loadJSON(SCHEMA_WITH_HANDLERS_PATH);
 
         final JSONObject createDefinition = definition.getJSONObject("handlers").getJSONObject("create");
         createDefinition.put("timeoutInMinutes", timeout);
@@ -358,8 +352,7 @@ public class ValidatorTest {
     @ParameterizedTest
     @ValueSource(strings = { "create", "update", "delete", "read", "list" })
     public void validateDefinition_timeoutAllowed_shouldNotThrow(final String handlerType) {
-        final JSONObject definition = new JSONObject(new JSONTokener(this.getClass()
-            .getResourceAsStream("/valid-with-handlers.json")));
+        final JSONObject definition = loadJSON(SCHEMA_WITH_HANDLERS_PATH);
 
         final JSONObject handlerDefinition = definition.getJSONObject("handlers").getJSONObject(handlerType);
         handlerDefinition.put("timeoutInMinutes", 30);
@@ -369,8 +362,7 @@ public class ValidatorTest {
 
     @Test
     public void validateDefinition_validHandlerSection_shouldNotThrow() {
-        final JSONObject definition = new JSONObject(new JSONTokener(this.getClass()
-            .getResourceAsStream("/valid-with-handlers.json")));
+        final JSONObject definition = loadJSON(SCHEMA_WITH_HANDLERS_PATH);
 
         validator.validateResourceDefinition(definition);
     }
@@ -475,11 +467,9 @@ public class ValidatorTest {
     }
 
     @Test
-    public void validateExample_exampleResource_shouldBeValid() throws IOException {
-        try (InputStream stream = this.getClass().getResourceAsStream("/examples/resource/initech.tps.report.v1.json")) {
-            final JSONObject example = new JSONObject(new JSONTokener(stream));
-            validator.validateResourceDefinition(example);
-        }
+    public void validateExample_exampleResourceProviderSchema_shouldBeValid() throws IOException {
+        final JSONObject example = loadJSON("/examples/resource/initech.tps.report.v1.json");
+        validator.validateResourceDefinition(example);
     }
 
     /**
@@ -508,9 +498,41 @@ public class ValidatorTest {
         });
     }
 
+    /**
+     * validate a valid model against a schema containing conditionals, like "oneOf"
+     */
+    @Test
+    public void schemaWithOneOf_validateCorrectModel_shouldSucceed() {
+        JSONObject resourceDefinition = loadJSON(SCHEMA_WITH_ONEOF);
+        ResourceTypeSchema schema = ResourceTypeSchema.load(resourceDefinition);
+
+        final JSONObject modelWithPropA = getSampleModel().put("propertyA", "property a, not b");
+        final JSONObject modelWithPropB = getSampleModel().put("propertyB", "property b, not a");
+
+        schema.validate(modelWithPropA);
+        schema.validate(modelWithPropB);
+    }
+
+    /**
+     * validate an invalid model against a schema containing conditionals ("oneOf")
+     */
+    @Test
+    public void schemaWithOneOf_validateIncorrectModel_shouldSucceed() {
+        JSONObject resourceDefinition = loadJSON(SCHEMA_WITH_ONEOF);
+        ResourceTypeSchema schema = ResourceTypeSchema.load(resourceDefinition);
+
+        final JSONObject modelWithNeitherAnorB = getSampleModel();
+
+        assertThatExceptionOfType(org.everit.json.schema.ValidationException.class).isThrownBy(
+            () -> schema.validate(modelWithNeitherAnorB));
+    }
+
     static JSONObject loadJSON(String path) {
-        try {
-            return new JSONObject(new JSONTokener(ValidatorTest.getResourceAsStream(path)));
+        try (InputStream stream = getResourceAsStream(path)) {
+            return new JSONObject(new JSONTokener(stream));
+        } catch (IOException ex) {
+            System.out.println("path: " + path);
+            throw new UncheckedIOException(ex);
         } catch (Throwable ex) {
             System.out.println("path: " + path);
             throw ex;
@@ -519,5 +541,9 @@ public class ValidatorTest {
 
     static InputStream getResourceAsStream(String path) {
         return ValidatorRefResolutionTests.class.getResourceAsStream(path);
+    }
+
+    static JSONObject getSampleModel() {
+        return new JSONObject().put("id", "required.identifier");
     }
 }

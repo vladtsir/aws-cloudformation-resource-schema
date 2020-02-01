@@ -22,7 +22,6 @@ import java.util.List;
 
 import org.everit.json.schema.PublicJSONPointer;
 import org.json.JSONObject;
-import org.json.JSONTokener;
 import org.junit.jupiter.api.Test;
 
 import software.amazon.cloudformation.resource.exceptions.ValidationException;
@@ -36,7 +35,7 @@ public class ResourceTypeSchemaTest {
 
     @Test
     public void getProperties() {
-        JSONObject o = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_SCHEMA_PATH)));
+        JSONObject o = loadJSON(TEST_SCHEMA_PATH);
         final ResourceTypeSchema schema = ResourceTypeSchema.load(o);
 
         assertThat(schema.getDescription()).isEqualTo("A test schema for unit tests.");
@@ -47,7 +46,7 @@ public class ResourceTypeSchemaTest {
 
     @Test
     public void getCreateOnlyProperties() {
-        JSONObject o = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_SCHEMA_PATH)));
+        JSONObject o = loadJSON(TEST_SCHEMA_PATH);
         final ResourceTypeSchema schema = ResourceTypeSchema.load(o);
 
         List<String> result = schema.getCreateOnlyPropertiesAsStrings();
@@ -57,7 +56,7 @@ public class ResourceTypeSchemaTest {
 
     @Test
     public void getDeprecatedProperties() {
-        JSONObject o = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_SCHEMA_PATH)));
+        JSONObject o = loadJSON(TEST_SCHEMA_PATH);
         final ResourceTypeSchema schema = ResourceTypeSchema.load(o);
 
         List<String> result = schema.getDeprecatedPropertiesAsStrings();
@@ -66,7 +65,7 @@ public class ResourceTypeSchemaTest {
 
     @Test
     public void getPrimaryIdentifier() {
-        JSONObject o = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_SCHEMA_PATH)));
+        JSONObject o = loadJSON(TEST_SCHEMA_PATH);
         final ResourceTypeSchema schema = ResourceTypeSchema.load(o);
 
         List<String> result = schema.getPrimaryIdentifierAsStrings();
@@ -75,7 +74,7 @@ public class ResourceTypeSchemaTest {
 
     @Test
     public void getAdditionalIdentifiers() {
-        JSONObject o = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_SCHEMA_PATH)));
+        JSONObject o = loadJSON(TEST_SCHEMA_PATH);
         final ResourceTypeSchema schema = ResourceTypeSchema.load(o);
 
         List<List<String>> result = schema.getAdditionalIdentifiersAsStrings();
@@ -85,7 +84,7 @@ public class ResourceTypeSchemaTest {
 
     @Test
     public void getReadOnlyProperties() {
-        JSONObject o = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_SCHEMA_PATH)));
+        JSONObject o = loadJSON(TEST_SCHEMA_PATH);
         final ResourceTypeSchema schema = ResourceTypeSchema.load(o);
 
         List<String> result = schema.getReadOnlyPropertiesAsStrings();
@@ -94,7 +93,7 @@ public class ResourceTypeSchemaTest {
 
     @Test
     public void getWriteOnlyProperties() {
-        JSONObject o = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_SCHEMA_PATH)));
+        JSONObject o = loadJSON(TEST_SCHEMA_PATH);
         final ResourceTypeSchema schema = ResourceTypeSchema.load(o);
 
         List<String> result = schema.getWriteOnlyPropertiesAsStrings();
@@ -103,7 +102,7 @@ public class ResourceTypeSchemaTest {
 
     @Test
     public void invalidSchema_shouldThrow() {
-        JSONObject o = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(EMPTY_SCHEMA_PATH)));
+        JSONObject o = loadJSON(EMPTY_SCHEMA_PATH);
 
         assertThatExceptionOfType(ValidationException.class).isThrownBy(() -> ResourceTypeSchema.load(o)).withNoCause()
             .withMessage("#/properties: minimum size: [1], found: [0]");
@@ -111,7 +110,7 @@ public class ResourceTypeSchemaTest {
 
     @Test
     public void invalidSchema_noAdditionalProperties_shouldThrow() {
-        JSONObject o = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(NO_ADDITIONAL_PROPERTIES_SCHEMA_PATH)));
+        JSONObject o = loadJSON(NO_ADDITIONAL_PROPERTIES_SCHEMA_PATH);
 
         assertThatExceptionOfType(ValidationException.class).isThrownBy(() -> ResourceTypeSchema.load(o)).withNoCause()
             .withMessage("#: required key [additionalProperties] not found");
@@ -119,7 +118,7 @@ public class ResourceTypeSchemaTest {
 
     @Test
     public void minimalSchema_hasNoSemantics() {
-        JSONObject o = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(MINIMAL_SCHEMA_PATH)));
+        JSONObject o = loadJSON(MINIMAL_SCHEMA_PATH);
         final ResourceTypeSchema schema = ResourceTypeSchema.load(o);
 
         assertThat(schema.getDescription()).isEqualTo("A test schema for unit tests.");
@@ -137,9 +136,9 @@ public class ResourceTypeSchemaTest {
 
     @Test
     public void removeWriteOnlyProperties_hasWriteOnlyProperties_shouldRemove() {
-        JSONObject o = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(TEST_SCHEMA_PATH)));
+        JSONObject o = loadJSON(TEST_SCHEMA_PATH);
         ResourceTypeSchema schema = ResourceTypeSchema.load(o);
-        JSONObject resourceModel = new JSONObject(new JSONTokener(this.getClass().getResourceAsStream(WRITEONLY_MODEL_PATH)));
+        JSONObject resourceModel = loadJSON(WRITEONLY_MODEL_PATH);
 
         schema.removeWriteOnlyProperties(resourceModel);
 
@@ -155,7 +154,7 @@ public class ResourceTypeSchemaTest {
 
     @Test
     public void validSchema_withOneOf_shouldSucceed() {
-        JSONObject resource = loadJSON("/valid-with-oneof.json");
+        JSONObject resource = loadJSON("/valid-with-oneof-schema.json");
         final ResourceTypeSchema schema = ResourceTypeSchema.load(resource);
     }
 }
